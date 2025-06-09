@@ -37,9 +37,9 @@ WaitVBlank:
     ld a, 0
     ld [wFrameCounter], a
 
-    ld a, $7
+    ld a, $0
     ld [wScroll0], a
-    ld a, $0E
+    ld a, $0D
     ld [wScroll1], a
     ld a, $0F
     ld [wScroll2], a
@@ -78,11 +78,55 @@ WaitVBlank2:
     ld [wFrameCounter], a
     
     ; Scrolling the background
+    call ParallaxScroll
     ld a, [rSCX]
-    inc a
+    add a, c
     ldh [rSCX], a
 
     jp Main
+
+ParallaxScroll:
+    ld de, rLYC
+    ld hl, wScroll0
+
+    ld a, [de]
+    ;add a, h
+
+
+    ldh a, [rLYC]
+    ld hl, wScroll0
+    cp a, [hl]
+    jp z, ScrollClouds
+
+    ld hl, wScroll1
+    cp a, [hl]
+    jp z, ScrollTrees
+
+    ld hl, wScroll2
+    cp a, [hl]
+    jp z, ScrollGround
+
+    inc a
+
+    jp ParallaxEnd
+
+ScrollClouds:
+    ld c, 1
+
+    jp ParallaxEnd
+
+ScrollTrees:
+    ld c, 2
+
+    jp ParallaxEnd
+
+ScrollGround:
+    ld c, 3
+
+    jp ParallaxEnd
+
+ParallaxEnd:
+    ret
 
 ; Memcpy
 ; Copies memory from source address to destination address
