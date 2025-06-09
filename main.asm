@@ -37,11 +37,11 @@ WaitVBlank:
     ld a, 0
     ld [wFrameCounter], a
 
-    ld a, 1
+    ld a, $7
     ld [wScroll0], a
-    ld a, 2
+    ld a, $0E
     ld [wScroll1], a
-    ld a, 3
+    ld a, $0F
     ld [wScroll2], a
 
     ; Turn the LCD on
@@ -51,6 +51,10 @@ WaitVBlank:
     ; During the first (blank) frame, initialize display registers
     ld a, %11100100
     ld [rBGP], a
+
+    xor a
+    ld [rSCX], a
+
 
 Main:
     ; Wait untill it's NOT VBlank
@@ -72,9 +76,13 @@ WaitVBlank2:
     ; Set frame counter back to zero
     ld a, 0
     ld [wFrameCounter], a
+    
+    ; Scrolling the background
+    ld a, [rSCX]
+    inc a
+    ldh [rSCX], a
 
-Done:
-    jp Done
+    jp Main
 
 ; Memcpy
 ; Copies memory from source address to destination address
