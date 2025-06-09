@@ -37,7 +37,7 @@ WaitVBlank:
     ld a, 0
     ld [wFrameCounter], a
 
-    ld a, $0
+    ld a, $00
     ld [wScroll0], a
     ld a, $0D
     ld [wScroll1], a
@@ -77,21 +77,32 @@ WaitVBlank2:
     ld a, 0
     ld [wFrameCounter], a
     
+    call UpdateBackground
+
+    jp Main
+
+UpdateBackground: 
+
+ParallaxLoop:
     ; Scrolling the background
     call ParallaxScroll
     ld a, [rSCX]
     add a, c
     ldh [rSCX], a
 
-    jp Main
+    ld hl, rLY
+    ld a, $1F
+
+    cp a, [hl]
+    jp nz, ParallaxLoop
+
+    ret
 
 ParallaxScroll:
-    ld de, rLYC
+    ld de, rLY
     ld hl, wScroll0
 
     ld a, [de]
-    ;add a, h
-
 
     ldh a, [rLYC]
     ld hl, wScroll0
@@ -105,8 +116,6 @@ ParallaxScroll:
     ld hl, wScroll2
     cp a, [hl]
     jp z, ScrollGround
-
-    inc a
 
     jp ParallaxEnd
 
