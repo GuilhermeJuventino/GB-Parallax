@@ -12,10 +12,7 @@ EntryPoint:
     ld [rNR52], a
 
     ; Do not turn the LCD off outside of VBlank
-WaitVBlank:
-    ld a, [rLY]
-    cp 144
-    jp c, WaitVBlank
+    call WaitVBlank
 
     ; Turn the LCD off
     ld a, 0
@@ -62,20 +59,13 @@ Main:
     cp 144
     jp nc, Main
 
-WaitVBlank2:
-    ld a, [rLY]
-    cp 144
-    jp c, WaitVBlank2
+    call WaitVBlank
 
     ld a, [wFrameCounter]
     inc a
     ld [wFrameCounter], a
-    cp a, 1 ; Run the following code every frame
-    jp nz, Main
-
-    ; Set frame counter back to zero
-    ld a, 0
-    ld [wFrameCounter], a
+    ;cp a, 1 ; Run the following code every frame
+    ;jp nz, Main
     
     call UpdateBackground
 
@@ -84,11 +74,7 @@ WaitVBlank2:
 UpdateBackground: 
 
 ParallaxLoop:
-    ; Scrolling the background
     call ParallaxScroll
-    ld a, [rSCX]
-    add a, c
-    ldh [rSCX], a
 
     ld hl, rLY
     ld a, $1F
@@ -99,23 +85,53 @@ ParallaxLoop:
     ret
 
 ParallaxScroll:
-    ld de, rLY
-    ld hl, wScroll0
-
-    ld a, [de]
-
-    ldh a, [rLYC]
-    ld hl, wScroll0
+    ld a, [wScroll0]
+    ld [hl], a
+    call Multiply
+WaitClouds:
+    ldh a, [rLY]
     cp a, [hl]
-    jp z, ScrollClouds
+    jp z, WaitClouds
 
-    ld hl, wScroll1
-    cp a, [hl]
-    jp z, ScrollTrees
+    ld a, [rSCX]
+    ld hl, wFrameCounter
+    add a, [hl]
+    ldh [rSCX], a
 
-    ld hl, wScroll2
+    ld a, [wScroll0]
+    ld [hl], a
+    call Multiply
+WaitTrees:
+    ldh a, [rLY]
     cp a, [hl]
-    jp z, ScrollGround
+    jp z, WaitTrees
+
+    ld a, [wFrameCounter]
+    ; divide wFrameCounter by 2
+    srl a
+    ld [hl], a
+
+    ld a, [rSCX]
+    add a, [hl]
+    ldh [rSCX], a
+    
+    ld a, [wScroll0]
+    ld [hl], a
+    call Multiply
+WaitGround:
+    ldh a, [rLY]
+    cp a, [hl]
+    jp z, WaitGround
+
+    ld a, [wFrameCounter]
+    ; divide wFrameCounter by 4
+    srl a
+    srl a
+    ld [hl], a
+
+    ld a, [rSCX]
+    add a, [hl]
+    ldh [rSCX], a
 
     jp ParallaxEnd
 
@@ -151,6 +167,26 @@ Memcpy:
     jp nz, Memcpy
 
     ret
+
+Multiply:
+    ld a, 8
+    ld c, 0
+
+MultiplyLoop:
+    add hl, hl
+    inc c
+    cp a, c
+    jp nz, MultiplyLoop
+   
+    ret
+
+WaitVBlank:
+    ld a, [rLY]
+    cp 144
+    jp c, WaitVBlank
+
+    ret
+
 
 Tiles: INCBIN "assets/background.2bpp"
 TilesEnd:
