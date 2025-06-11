@@ -1,5 +1,13 @@
 INCLUDE "hardware.inc"
 
+
+def TreesStart EQU 104
+def GroundStart EQU 120
+
+def CloudsSpeed EQU 1
+def TreesSpeed EQU 2
+def GroundSpeed EQU 3
+
 SECTION "Header", ROM0[$100]
 
     jp EntryPoint
@@ -33,13 +41,12 @@ EntryPoint:
     ; Initializing global variables
     ld a, 0
     ld [wFrameCounter], a
-
-    ld a, $00
-    ld [wScroll0], a
-    ld a, $0D
-    ld [wScroll1], a
-    ld a, $0F
-    ld [wScroll2], a
+    
+    ; Initial scroll position of background segments
+    xor a
+    ld [wCloudsPosition], a
+    ld [wTreesPosition], a
+    ld [wGroundPosition], a
 
     ; Turn the LCD on
     ld a, LCDCF_ON | LCDCF_BGON
@@ -53,105 +60,68 @@ EntryPoint:
     ld [rSCX], a
 
 
-Main:
-    ; Wait untill it's NOT VBlank
-    ld a, [rLY]
-    cp 144
-    jp nc, Main
-
-    call WaitVBlank
-
-    ld a, [wFrameCounter]
-    inc a
-    ld [wFrameCounter], a
-    ;cp a, 1 ; Run the following code every frame
-    ;jp nz, Main
-    
+Main:    
     call UpdateBackground
 
-    jp Main
+    ;jp Main
 
 UpdateBackground: 
 
-ParallaxLoop:
-    call ParallaxScroll
-
-    ld hl, rLY
-    ld a, $1F
-
-    cp a, [hl]
-    jp nz, ParallaxLoop
-
-    ret
-
-ParallaxScroll:
-    ld a, [wScroll0]
-    ld [hl], a
-    call Multiply
-WaitClouds:
+WaitForTrees:
     ldh a, [rLY]
-    cp a, [hl]
-    jp z, WaitClouds
+    cp a, TreesStart - 1
+    jp nz, WaitForTrees
 
-    ld a, [rSCX]
-    ld hl, wFrameCounter
-    add a, [hl]
+    REPT 80
+        nop
+    ENDR
+
+    ld a, [wTreesPosition]
     ldh [rSCX], a
 
-    ld a, [wScroll0]
-    ld [hl], a
-    call Multiply
-WaitTrees:
+WaitForGround:
     ldh a, [rLY]
-    cp a, [hl]
-    jp z, WaitTrees
+    cp a, GroundStart - 1
+    jp nz, WaitForGround
+
+    REPT 80
+        nop
+    ENDR
+
+    ld a, [wGroundPosition]
+    ldh [rSCX], a
+
+    call WaitVBlank
+
+    ld a, [wCloudsPosition]
+    ldh [rSCX], a
 
     ld a, [wFrameCounter]
-    ; divide wFrameCounter by 2
-    srl a
-    ld [hl], a
+    inc a
 
-    ld a, [rSCX]
-    add a, [hl]
-    ldh [rSCX], a
-    
-    ld a, [wScroll0]
-    ld [hl], a
-    call Multiply
-WaitGround:
-    ldh a, [rLY]
-    cp a, [hl]
-    jp z, WaitGround
+    ; reset every 3 frames
+    cp a, 3
+    jr nz, SaveFrame
 
-    ld a, [wFrameCounter]
-    ; divide wFrameCounter by 4
-    srl a
-    srl a
-    ld [hl], a
+    xor a
 
-    ld a, [rSCX]
-    add a, [hl]
-    ldh [rSCX], a
+SaveFrame:
+    ld [wFrameCounter], a
+    jp nz, Main
 
-    jp ParallaxEnd
+    ld a, [wTreesPosition]
+    add a, TreesSpeed
+    ld [wTreesPosition], a
 
-ScrollClouds:
-    ld c, 1
+    ld a, [wGroundPosition]
+    add a, GroundSpeed
+    ld [wGroundPosition], a
 
-    jp ParallaxEnd
+    ld a, [wCloudsPosition]
+    add a, CloudsSpeed
+    ld [wCloudsPosition], a
 
-ScrollTrees:
-    ld c, 2
-
-    jp ParallaxEnd
-
-ScrollGround:
-    ld c, 3
-
-    jp ParallaxEnd
-
-ParallaxEnd:
-    ret
+    jp Main
 
 ; Memcpy
 ; Copies memory from source address to destination address
@@ -166,18 +136,6 @@ Memcpy:
     or a, c
     jp nz, Memcpy
 
-    ret
-
-Multiply:
-    ld a, 8
-    ld c, 0
-
-MultiplyLoop:
-    add hl, hl
-    inc c
-    cp a, c
-    jp nz, MultiplyLoop
-   
     ret
 
 WaitVBlank:
@@ -197,9 +155,9 @@ TilemapEnd:
 
 SECTION "Backgrond Scroll", WRAM0
 
-wScroll0: db
-wScroll1: db
-wScroll2: db
+wCloudsPosition: db
+wTreesPosition: db
+wGroundPosition: db
 
 SECTION "Counter", WRAM0
 
