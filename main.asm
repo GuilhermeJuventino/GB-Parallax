@@ -39,11 +39,10 @@ EntryPoint:
     call Memcpy
 
     ; Initializing global variables
-    ld a, 0
+    xor a
     ld [wFrameCounter], a
     
     ; Initial scroll position of background segments
-    xor a
     ld [wCloudsPosition], a
     ld [wTreesPosition], a
     ld [wGroundPosition], a
@@ -61,33 +60,37 @@ EntryPoint:
 
 
 Main:    
-    call UpdateBackground
-
-    ;jp Main
 
 UpdateBackground: 
 
 WaitForTrees:
+    ; Comparing with TreesStart - 1, so we reach a y position that is 1 line higher than we need
     ldh a, [rLY]
     cp a, TreesStart - 1
     jp nz, WaitForTrees
-
+    
+    ; Burning a few cycles until we reach Mode 3
     REPT 80
         nop
     ENDR
-
+    
+    ; Updating Scroll X for the trees segment
     ld a, [wTreesPosition]
     ldh [rSCX], a
 
 WaitForGround:
+    ; Comparing with GroundStart - 1, so we reach a y position that is 1 line higher than we need
     ldh a, [rLY]
     cp a, GroundStart - 1
     jp nz, WaitForGround
-
+    
+    ; Burning a few cycles until we reach Mode 3
     REPT 80
         nop
     ENDR
-
+    
+    ; Updating Scroll X for the ground segment and waiting for one VBlank
+    ; before finally doing the same for the clouds segment
     ld a, [wGroundPosition]
     ldh [rSCX], a
 
@@ -95,7 +98,8 @@ WaitForGround:
 
     ld a, [wCloudsPosition]
     ldh [rSCX], a
-
+    
+    ; Updating frame counter
     ld a, [wFrameCounter]
     inc a
 
@@ -108,7 +112,8 @@ WaitForGround:
 SaveFrame:
     ld [wFrameCounter], a
     jp nz, Main
-
+    
+    ; Finally updating the positions of each segment in order to actually update the frame itself
     ld a, [wTreesPosition]
     add a, TreesSpeed
     ld [wTreesPosition], a
@@ -120,7 +125,9 @@ SaveFrame:
     ld a, [wCloudsPosition]
     add a, CloudsSpeed
     ld [wCloudsPosition], a
-
+    
+    ; Thus achieving a parallax effect, tho it burns a lot of cycles, that approach must really suck for actual games
+    ; because of that, I can only imagine the performance cost...
     jp Main
 
 ; Memcpy
